@@ -64,11 +64,31 @@ function addResult(entry) {
   results.unshift(obj);
   renderResults();
   if (resultEl) resultEl.textContent = obj.uid + ' / ' + obj.name + ' / ' + (obj.amount != null ? obj.amount : '');
+  // briefly highlight the newest item
+  flashLast();
+}
+
+function flashLast() {
+  try {
+    const first = resultsList && resultsList.querySelector('li');
+    if (!first) return;
+    first.classList.remove('highlight');
+    // trigger reflow
+    void first.offsetWidth;
+    first.classList.add('highlight');
+    setTimeout(() => { try { first.classList.remove('highlight'); } catch(e) {} }, 1200);
+  } catch(e){}
 }
 
 function showToast(message, type = 'success', ms = 3000) {
   const container = document.getElementById('toastContainer');
   if (!container) return;
+  // dedupe identical messages for a short period to avoid floods
+  const now = Date.now();
+  window._lastToastTimes = window._lastToastTimes || {};
+  const last = window._lastToastTimes[message] || 0;
+  if (now - last < 3000) return; // skip duplicate
+  window._lastToastTimes[message] = now;
   const t = document.createElement('div');
   t.className = 'toast ' + (type || '');
   t.textContent = message;
@@ -81,9 +101,9 @@ function processBarcode(raw) {
   if (!raw) return;
   const now = Date.now();
   if (seenValues.has(raw)) { showToast('Duplicate barcode ignored', 'warn'); return; }
-  if (now - lastScanTime < 3000) { showToast('Please wait 3 seconds between scans', 'warn'); return; }
-  // parse up to three values: id, name, amount (allow separators , | ; : )
-  const parts = raw.split(/[,|;:]/).map(p => p.trim());
+  // Note: callers should enforce the 3s gap to avoid repeated toasts; do not show here.
+  // parse up to three values: id, name, amount (allow separators , | ; : - _ / )
+  const parts = raw.split(/[,|;:\-_/]/).map(p => p.trim());
   const uid = parts[0] || '';
   const name = parts[1] || '';
   let amt = null;
@@ -102,6 +122,7 @@ function processBarcode(raw) {
   seenValues.add(raw);
   lastScanTime = now;
   addResult({ raw, uid, name, amount: amt });
+  showToast(`Scanned: ${uid || '[no id]'}`, 'success');
 }
 
 async function startCamera(deviceId) {
@@ -140,7 +161,10 @@ async function detectLoop() {
       if (!barcodeDetector) barcodeDetector = new BarcodeDetector();
       const barcodes = await barcodeDetector.detect(video);
       if (barcodes && barcodes.length) {
-        for (const b of barcodes) processBarcode(b.rawValue || JSON.stringify(b));
+        const now = Date.now();
+        if (now - lastScanTime >= 3000) {
+          for (const b of barcodes) processBarcode(b.rawValue || JSON.stringify(b));
+        }
       }
     } catch (err) {
       barcodeDetectorSupported = false;
@@ -152,7 +176,8 @@ async function detectLoop() {
       try {
         zxingReader.decodeFromVideoDevice(currentDeviceId || null, 'video', (result, error) => {
           if (result) {
-            processBarcode(result.text);
+            const now = Date.now();
+            if (now - lastScanTime >= 3000) processBarcode(result.text);
           }
         });
         return;
@@ -238,6 +263,8 @@ if (captureBtn) {
   captureBtn.addEventListener('click', async () => {
     resultEl.textContent = 'Processing…';
     try {
+      const now = Date.now();
+      if (now - lastScanTime < 3000) { showToast('Please wait 3 seconds between scans', 'warn'); return; }
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
       const ctx = canvas.getContext('2d');
