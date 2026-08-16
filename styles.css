@@ -2,7 +2,7 @@
 body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin: 0; padding: 16px; background: #f7f7f8; color: #111; }
 header { text-align: center; margin-bottom: 12px; }
 header h1 { margin: 0 0 4px 0; font-size: 1.5rem; }
-.camera-wrap { display:flex; justify-content:center; align-items:center; background:#000; border-radius:12px; overflow:hidden; height: auto; max-height: 60vh; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+.camera-wrap { display:flex; justify-content:center; align-items:center; background:#000; border-radius:12px; overflow:hidden; width:100%; aspect-ratio: 2 / 1; height: auto; max-height: 60vh; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
 video { width: 100%; height: 100%; object-fit: cover; }
 .controls { margin-top: 12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .controls button { padding:8px 12px; border-radius:6px; border:1px solid #ccc; background:#fff; }
@@ -29,7 +29,7 @@ footer { margin-top:18px; font-size:0.85rem; color:#555; }
 .toast.warn { background: #e09b00; }
 .toast.error { background: #d93025; }
 
-@media (min-width:700px){ .camera-wrap { height: 60vh; max-height: 520px; } }
+@media (min-width:700px){ .camera-wrap { aspect-ratio: 2 / 1; max-height: 520px; width: 100%; } }
 
 /* Colors */
 :root {
