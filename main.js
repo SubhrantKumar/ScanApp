@@ -12,6 +12,10 @@ const saveMonthsBtn = document.getElementById('saveMonthsBtn');
 const cancelMonthsBtn = document.getElementById('cancelMonthsBtn');
 const grandTotalEl = document.getElementById('grandTotal');
 
+// initial visibility for buttons when no records
+if (clearBtn) clearBtn.style.display = 'none';
+if (downloadBtn) downloadBtn.style.display = 'none';
+
 let currentStream = null;
 let barcodeDetectorSupported = ('BarcodeDetector' in window);
 let barcodeDetector = null;
@@ -57,6 +61,9 @@ function renderResults() {
   }
   updateRemoveButtonVisibility();
   updateGrandTotal();
+  // show/hide Clear and Download depending on whether there are results
+  if (clearBtn) clearBtn.style.display = results.length ? 'inline-block' : 'none';
+  if (downloadBtn) downloadBtn.style.display = results.length ? 'inline-block' : 'none';
 }
 
 function updateRemoveButtonVisibility() {
@@ -284,63 +291,8 @@ if (downloadBtn) {
   });
 }
 
-// Capture button handler: grab one frame and process it
-const captureBtn = document.getElementById('captureBtn');
-if (captureBtn) {
-  captureBtn.addEventListener('click', async () => {
-    resultEl.textContent = 'Processing…';
-    try {
-      const now = Date.now();
-      if (now - lastScanTime < 3000) { showToast('Please wait 3 seconds between scans', 'warn'); return; }
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // Try BarcodeDetector on the captured image
-      if (barcodeDetectorSupported) {
-        try {
-          if (!barcodeDetector) barcodeDetector = new BarcodeDetector();
-          const barcodes = await barcodeDetector.detect(canvas);
-          if (barcodes && barcodes.length) {
-            for (const b of barcodes) processBarcode(b.rawValue || JSON.stringify(b));
-            return;
-          }
-        } catch (e) {
-          barcodeDetectorSupported = false;
-        }
-      }
-
-      // Fallback using ZXing: try decoding from a temporary image
-      if (window.ZXing && ZXing.BrowserMultiFormatReader) {
-        try {
-          const reader = new ZXing.BrowserMultiFormatReader();
-          const dataUrl = canvas.toDataURL('image/png');
-          const img = new Image();
-          img.src = dataUrl;
-          await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
-          // decodeFromImage may return a promise or throw; handle both
-          try {
-            const resObj = await reader.decodeFromImage(img);
-            if (resObj) { processBarcode(resObj.text || resObj); return; }
-          } catch (e) {
-            // Some builds use callback style; attempt sync decode
-            try {
-              const sync = reader.decodeFromImage(img);
-              if (sync) { processBarcode(sync.text || sync); return; }
-            } catch (err) {}
-          }
-        } catch (e) {
-          console.warn('ZXing image decode failed', e);
-        }
-      }
-
-      showResult('No barcode detected.');
-    } catch (err) {
-      resultEl.textContent = 'Error processing frame: ' + err.message;
-    }
-  });
-}
+// Capture button removed — scanning runs continuously. If you need a manual capture,
+// re-add a control and wire it to a frame-capture + processBarcode call.
 
 // Months modal flow and handlers
 let pendingMonthsId = null;
