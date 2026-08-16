@@ -22,6 +22,7 @@
       <button id="captureBtn">Capture</button>
       <button id="clearBtn">Clear All</button>
       <button id="removeBtn" style="display:none">Remove Selected</button>
+      <button id="downloadBtn">Download PDF</button>
     </div>
 
     <section class="output">
@@ -31,6 +32,8 @@
       <h3>Scanned Codes</h3>
       <ul id="resultsList" class="results-list"></ul>
     </section>
+
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
   </main>
 
   <footer>
@@ -38,6 +41,7 @@
   </footer>
 
   <script src="https://unpkg.com/@zxing/library@0.18.6"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
   <script src="main.js"></script>
 </body>
 </html>
