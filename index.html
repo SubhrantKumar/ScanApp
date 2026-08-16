@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mobile Barcode Scanner</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Mobile Barcode Scanner</h1>
+    <p>Point your phone camera at a barcode; the data will appear below.</p>
+  </header>
+
+  <main>
+    <div class="camera-wrap">
+      <video id="video" playsinline autoplay muted></video>
+      <canvas id="canvas" hidden></canvas>
+    </div>
+
+    <div class="controls-simple">
+      <button id="captureBtn">Capture</button>
+      <button id="clearBtn">Clear All</button>
+      <button id="removeBtn" style="display:none">Remove Selected</button>
+    </div>
+
+    <section class="output">
+      <h2>Result</h2>
+      <pre id="result">Initializing camera…</pre>
+
+      <h3>Scanned Codes</h3>
+      <ul id="resultsList" class="results-list"></ul>
+    </section>
+  </main>
+
+  <footer>
+    <small>Works best on mobile browsers that support camera access. Served over HTTPS or localhost is required.</small>
+  </footer>
+
+  <script src="https://unpkg.com/@zxing/library@0.18.6"></script>
+  <script src="main.js"></script>
+</body>
+</html>
