@@ -82,18 +82,22 @@ function processBarcode(raw) {
   const now = Date.now();
   if (seenValues.has(raw)) { showToast('Duplicate barcode ignored', 'warn'); return; }
   if (now - lastScanTime < 3000) { showToast('Please wait 3 seconds between scans', 'warn'); return; }
-
-  // parse expecting three values: id, name, amount (allow separators , | ; : )
-  const parts = raw.split(/[,|;:]/).map(p => p.trim()).filter(Boolean);
-  if (parts.length < 3) {
-    showToast('Barcode format invalid (expected id,name,amount)', 'error');
-    return;
+  // parse up to three values: id, name, amount (allow separators , | ; : )
+  const parts = raw.split(/[,|;:]/).map(p => p.trim());
+  const uid = parts[0] || '';
+  const name = parts[1] || '';
+  let amt = null;
+  if (parts.length >= 3 && parts[2] && parts[2].trim() !== '') {
+    const parsed = parseFloat(parts[2].replace(/[^0-9.-]/g, ''));
+    if (!isNaN(parsed)) {
+      if (parsed > 20000) { amt = 20000; showToast('Amount capped to 20000', 'warn'); }
+      else amt = parsed;
+    } else {
+      // keep amount blank when not numeric
+      amt = null;
+      showToast('Amount not numeric; stored blank', 'warn');
+    }
   }
-  const uid = parts[0];
-  const name = parts[1];
-  let amt = parseFloat(parts[2].replace(/[^0-9.-]/g, ''));
-  if (isNaN(amt)) { showToast('Invalid amount field', 'error'); return; }
-  if (amt > 20000) { amt = 20000; showToast('Amount capped to 20000', 'warn'); }
 
   seenValues.add(raw);
   lastScanTime = now;
