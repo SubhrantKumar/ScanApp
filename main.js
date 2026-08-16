@@ -5,6 +5,12 @@ const resultsList = document.getElementById('resultsList');
 const clearBtn = document.getElementById('clearBtn');
 const removeBtn = document.getElementById('removeBtn');
 const downloadBtn = document.getElementById('downloadBtn');
+const updateMonthsBtn = document.getElementById('updateMonthsBtn');
+const monthsModal = document.getElementById('monthsModal');
+const monthsInput = document.getElementById('monthsInput');
+const saveMonthsBtn = document.getElementById('saveMonthsBtn');
+const cancelMonthsBtn = document.getElementById('cancelMonthsBtn');
+const grandTotalEl = document.getElementById('grandTotal');
 
 let currentStream = null;
 let barcodeDetectorSupported = ('BarcodeDetector' in window);
@@ -37,21 +43,30 @@ function renderResults() {
     span.appendChild(nameEl);
     span.appendChild(amtEl);
 
+    const monthsEl = document.createElement('div'); monthsEl.className = 'months'; monthsEl.textContent = item.months != null ? item.months : '';
+    const totalEl = document.createElement('div'); totalEl.className = 'total'; totalEl.textContent = item.total != null ? Number(item.total).toLocaleString() : '';
     const time = document.createElement('div');
     time.className = 'time';
     time.textContent = new Date(item.time).toLocaleTimeString();
     li.appendChild(cb);
     li.appendChild(span);
+    li.appendChild(monthsEl);
+    li.appendChild(totalEl);
     li.appendChild(time);
     resultsList.appendChild(li);
   }
   updateRemoveButtonVisibility();
+  updateGrandTotal();
 }
 
 function updateRemoveButtonVisibility() {
   if (!removeBtn || !resultsList) return;
   const anyChecked = Array.from(resultsList.querySelectorAll('input.sel')).some(i => i.checked);
   removeBtn.style.display = anyChecked ? 'inline-block' : 'none';
+  if (updateMonthsBtn) {
+    const checked = Array.from(resultsList.querySelectorAll('input.sel:checked'));
+    updateMonthsBtn.style.display = (checked.length === 1) ? 'inline-block' : 'none';
+  }
 }
 
 function addResult(entry) {
@@ -59,13 +74,23 @@ function addResult(entry) {
   const id = Date.now() + '-' + Math.floor(Math.random()*1000);
   const now = Date.now();
   let obj;
-  if (typeof entry === 'string') obj = { id, raw: entry, uid: entry, name: '', amount: null, time: now };
-  else obj = { id, raw: entry.raw || '', uid: entry.uid || entry.id || '', name: entry.name || '', amount: entry.amount != null ? entry.amount : null, time: now };
+  if (typeof entry === 'string') obj = { id, raw: entry, uid: entry, name: '', amount: null, originalAmount: null, time: now };
+  else obj = { id, raw: entry.raw || '', uid: entry.uid || entry.id || '', name: entry.name || '', amount: entry.amount != null ? entry.amount : null, originalAmount: entry.amount != null ? entry.amount : null, time: now };
   results.unshift(obj);
   renderResults();
   if (resultEl) resultEl.textContent = obj.uid + ' / ' + obj.name + ' / ' + (obj.amount != null ? obj.amount : '');
   // briefly highlight the newest item
   flashLast();
+}
+
+function updateGrandTotal() {
+  if (!grandTotalEl) return;
+  let sum = 0;
+  for (const r of results) {
+    if (r.total != null && !isNaN(Number(r.total))) sum += Number(r.total);
+    else if (r.amount != null && !isNaN(Number(r.amount))) sum += Number(r.amount);
+  }
+  grandTotalEl.textContent = 'Total: ' + sum.toLocaleString();
 }
 
 function flashLast() {
@@ -206,6 +231,7 @@ window.addEventListener('pagehide', stopCamera);
 // Clear All button
 if (clearBtn) {
   clearBtn.addEventListener('click', () => {
+    if (!confirm('Clear all results?')) return;
     results = [];
     renderResults();
     seenValues.clear();
@@ -234,6 +260,7 @@ if (removeBtn) {
 // Download PDF button
 if (downloadBtn) {
   downloadBtn.addEventListener('click', () => {
+    if (!confirm('Download PDF of scanned results?')) return;
     if (!results || !results.length) { showToast('No results to download', 'warn'); return; }
     // build a printable clone
     const wrap = document.createElement('div');
@@ -242,12 +269,12 @@ if (downloadBtn) {
     table.style.width = '100%';
     table.style.borderCollapse = 'collapse';
     const thead = document.createElement('thead');
-    thead.innerHTML = '<tr><th style="text-align:left;padding:6px;border-bottom:1px solid #ddd">ID</th><th style="text-align:left;padding:6px;border-bottom:1px solid #ddd">Name</th><th style="text-align:right;padding:6px;border-bottom:1px solid #ddd">Amount</th><th style="text-align:right;padding:6px;border-bottom:1px solid #ddd">Time</th></tr>';
+    thead.innerHTML = '<tr><th style="text-align:left;padding:6px;border-bottom:1px solid #ddd">ID</th><th style="text-align:left;padding:6px;border-bottom:1px solid #ddd">Name</th><th style="text-align:right;padding:6px;border-bottom:1px solid #ddd">Amount</th><th style="text-align:right;padding:6px;border-bottom:1px solid #ddd">Months</th><th style="text-align:right;padding:6px;border-bottom:1px solid #ddd">Total</th><th style="text-align:right;padding:6px;border-bottom:1px solid #ddd">Time</th></tr>';
     table.appendChild(thead);
     const tb = document.createElement('tbody');
     for (const r of results) {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td style="padding:6px;border-bottom:1px solid #f1f1f1">${r.uid}</td><td style="padding:6px;border-bottom:1px solid #f1f1f1">${r.name}</td><td style="padding:6px;border-bottom:1px solid #f1f1f1;text-align:right">${r.amount != null ? r.amount.toLocaleString() : ''}</td><td style="padding:6px;border-bottom:1px solid #f1f1f1;text-align:right">${new Date(r.time).toLocaleTimeString()}</td>`;
+      tr.innerHTML = `<td style="padding:6px;border-bottom:1px solid #f1f1f1">${r.uid}</td><td style="padding:6px;border-bottom:1px solid #f1f1f1">${r.name}</td><td style="padding:6px;border-bottom:1px solid #f1f1f1;text-align:right">${r.originalAmount != null ? Number(r.originalAmount).toLocaleString() : ''}</td><td style="padding:6px;border-bottom:1px solid #f1f1f1;text-align:right">${r.months != null ? r.months : ''}</td><td style="padding:6px;border-bottom:1px solid #f1f1f1;text-align:right">${r.total != null ? Number(r.total).toLocaleString() : ''}</td><td style="padding:6px;border-bottom:1px solid #f1f1f1;text-align:right">${new Date(r.time).toLocaleTimeString()}</td>`;
       tb.appendChild(tr);
     }
     table.appendChild(tb);
@@ -314,3 +341,64 @@ if (captureBtn) {
     }
   });
 }
+
+// Months modal flow and handlers
+let pendingMonthsId = null;
+function hideMonthsModal() {
+  if (monthsModal) monthsModal.hidden = true;
+  pendingMonthsId = null;
+}
+function showMonthsModalFor(id) {
+  const found = results.find(r => r.id === id);
+  if (!found) { showToast('Record not found', 'error'); return; }
+  pendingMonthsId = id;
+  if (monthsInput) monthsInput.value = found.months != null ? found.months : (found.originalAmount ? 1 : 1);
+  if (saveMonthsBtn) saveMonthsBtn.disabled = !(monthsInput && Number(monthsInput.value) > 0);
+  if (monthsModal) monthsModal.hidden = false;
+  if (monthsInput) monthsInput.focus();
+}
+
+if (updateMonthsBtn) {
+  updateMonthsBtn.addEventListener('click', () => {
+    if (!resultsList) return;
+    const checked = Array.from(resultsList.querySelectorAll('input.sel:checked')).map(i => i.dataset.id);
+    if (checked.length !== 1) { showToast('Select exactly one record to update months', 'warn'); return; }
+    showMonthsModalFor(checked[0]);
+  });
+}
+
+if (monthsInput) {
+  monthsInput.addEventListener('input', () => {
+    const v = parseInt(monthsInput.value, 10);
+    if (saveMonthsBtn) saveMonthsBtn.disabled = isNaN(v) || v <= 0;
+  });
+}
+
+if (saveMonthsBtn) {
+  saveMonthsBtn.addEventListener('click', () => {
+    if (!pendingMonthsId) { hideMonthsModal(); return; }
+    const v = parseInt(monthsInput && monthsInput.value, 10);
+    if (isNaN(v) || v <= 0) { showToast('Enter a valid months value', 'warn'); return; }
+    const found = results.find(r => r.id === pendingMonthsId);
+    if (!found) { showToast('Record not found', 'error'); hideMonthsModal(); return; }
+    // multiply original amount by months (preserve originalAmount)
+    const base = (found.originalAmount != null && !isNaN(Number(found.originalAmount))) ? Number(found.originalAmount) : (found.amount != null ? Number(found.amount) : 0);
+    found.months = v;
+    found.amount = base * v;
+    found.total = found.amount;
+    renderResults();
+    showToast('Months saved', 'success');
+    hideMonthsModal();
+  });
+}
+
+if (cancelMonthsBtn) {
+  cancelMonthsBtn.addEventListener('click', () => { hideMonthsModal(); });
+}
+
+// Confirm before unloading/reloading page
+window.addEventListener('beforeunload', (e) => {
+  const confirmationMessage = 'Are you sure you want to leave? Unsaved scan results may be lost.';
+  e.returnValue = confirmationMessage; // Gecko, Trident, Chrome 34+
+  return confirmationMessage; // Gecko, WebKit, Chrome <34
+});
